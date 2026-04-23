@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "com.SKapit.smartassistant"
+    namespace = "com.sKapit.smartassistant"
     compileSdk {
         version = release(36) {
             minorApiLevel = 1
@@ -41,6 +41,7 @@ dependencies {
     implementation(libs.material)
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
+    implementation(libs.google.gson)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

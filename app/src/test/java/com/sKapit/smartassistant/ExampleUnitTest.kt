@@ -1,4 +1,4 @@
-package com.SKapit.smartassistant
+package com.sKapit.smartassistant
 
 import org.junit.Test
 
