@@ -10,23 +10,27 @@ import androidx.recyclerview.widget.RecyclerView
 
 class MainActivity : AppCompatActivity() {
     private lateinit var storage: TaskStorage
-    private lateinit var recyclerView: RecyclerView
     private lateinit var adapter: TaskAdapter
     private val tasks = mutableListOf<Task>()
-
-    private val ADD_TASK_REQUEST = 1
 
     private val addTaskLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode == RESULT_OK) {
                 val data = result.data
+                val title = data?.getStringExtra("title") ?: ""
+                val time = data?.getLongExtra("time", System.currentTimeMillis()) ?: System.currentTimeMillis()
+                val location = data?.getStringExtra("location") ?: ""
 
-                val title = data?.getStringExtra("title") ?: return@registerForActivityResult
-                val time = data.getStringExtra("time") ?: ""
-                val location = data.getStringExtra("location") ?: ""
+                val newTask = Task(
+                    id = tasks.size + 1,
+                    title = title,
+                    time = time,
+                    locationName = location
+                )
 
-                tasks.add(Task(title, time, location))
-                adapter.notifyDataSetChanged()
+                tasks.add(newTask)
+                adapter.notifyItemInserted(tasks.size - 1)
+                storage.saveTasks(tasks) // Save to SharedPreferences
             }
         }
 
@@ -34,34 +38,17 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        recyclerView = findViewById(R.id.recyclerTasks)
-        val btnAdd = findViewById<Button>(R.id.btnAddTask)
+        storage = TaskStorage(this)
+        tasks.addAll(storage.loadTasks())
 
+        val recyclerView = findViewById<RecyclerView>(R.id.recyclerTasks)
         adapter = TaskAdapter(tasks)
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = adapter
 
-        // test danni
-        tasks.add(Task("Лекция", "10:00", "ТУ София"))
-        tasks.add(Task("Среща", "18:00", "Ресторант"))
-
-        adapter.notifyDataSetChanged()
-
-        btnAdd.setOnClickListener {
+        findViewById<Button>(R.id.btnAddTask).setOnClickListener {
             val intent = Intent(this, AddTaskActivity::class.java)
             addTaskLauncher.launch(intent)
-        }
-    }
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-
-        if (requestCode == ADD_TASK_REQUEST && resultCode == RESULT_OK) {
-            val title = data?.getStringExtra("title") ?: ""
-            val time = data?.getStringExtra("time") ?: ""
-            val location = data?.getStringExtra("location") ?: ""
-
-            tasks.add(Task(title, time, location))
-            adapter.notifyDataSetChanged()
         }
     }
 }
