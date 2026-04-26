@@ -24,8 +24,22 @@ class TaskStorage(context: Context) {
 
     private fun createDefaultTasks(): MutableList<Task> {
         val defaultTasks = mutableListOf(
-            Task(1, "Лекция", time = System.currentTimeMillis(), locationName = "ТУ София"),
-            Task(2, "Среща", time = System.currentTimeMillis() + 3600000, locationName = "Ресторант")
+            Task(
+                id = 1,
+                title = "Лекция",
+                time = System.currentTimeMillis(),
+                locationName = "ТУ София",
+                latitude = 42.6536,
+                longitude = 23.3551
+            ),
+            Task(
+                id = 2,
+                title = "Среща",
+                time = System.currentTimeMillis() + 3600000,
+                locationName = "Ресторант",
+                latitude = 42.6977,
+                longitude = 23.3219
+            )
         )
         saveTasks(defaultTasks)
         return defaultTasks

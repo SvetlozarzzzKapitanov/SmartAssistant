@@ -5,8 +5,8 @@ data class Task(
     val title: String,
     val description: String? = null,
     val time: Long, // Changed to Long for travel_time calculations
-    val locationName: String? = null,
-    val latitude: Double? = null,
-    val longitude: Double? = null,
-    val isCompleted: Boolean = false
+    val locationName: String,
+    val latitude: Double,    // Взето от Places API
+    val longitude: Double,   // Взето от Places API
+    var leaveTime: Long? = null // чрез Distance Matrix
 )
