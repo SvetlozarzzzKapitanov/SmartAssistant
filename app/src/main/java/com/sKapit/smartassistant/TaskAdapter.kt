@@ -14,6 +14,7 @@ class TaskAdapter(private val tasks: List<Task>) :
     class TaskViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val title: TextView = itemView.findViewById(R.id.taskTitle)
         val time: TextView = itemView.findViewById(R.id.taskTime)
+        val leaveTime: TextView = itemView.findViewById(R.id.taskLeaveTime)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TaskViewHolder {
@@ -26,9 +27,15 @@ class TaskAdapter(private val tasks: List<Task>) :
         val task = tasks[position]
         holder.title.text = task.title
 
-        // Formats the Long timestamp back to HH:mm for the UI
         val sdf = SimpleDateFormat("HH:mm", Locale.getDefault())
-        holder.time.text = sdf.format(Date(task.time))
+        holder.time.text = "Събитие: " + sdf.format(Date(task.time))
+
+        if (task.leaveTime != null) {
+            holder.leaveTime.visibility = View.VISIBLE
+            holder.leaveTime.text = "Тръгни в: " + sdf.format(Date(task.leaveTime!!))
+        } else {
+            holder.leaveTime.visibility = View.GONE
+        }
     }
 
     override fun getItemCount() = tasks.size

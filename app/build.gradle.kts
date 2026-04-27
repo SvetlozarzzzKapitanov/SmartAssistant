@@ -58,6 +58,7 @@ dependencies {
     implementation(libs.google.gson)
     implementation(libs.play.services.location)
     implementation(libs.places)
+    implementation(libs.okhttp.v530)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

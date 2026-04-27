@@ -30,9 +30,9 @@ class AddTaskActivity : AppCompatActivity() {
             val intent = result.data
             if (intent != null) {
                 val place = Autocomplete.getPlaceFromIntent(intent)
-                selectedAddress = place.name ?: ""
-                selectedLat = place.latLng?.latitude ?: 0.0
-                selectedLng = place.latLng?.longitude ?: 0.0
+                selectedAddress = place.displayName ?: ""
+                selectedLat = place.location?.latitude ?: 0.0
+                selectedLng = place.location?.longitude ?: 0.0
 
                 findViewById<EditText>(R.id.inputLocation).setText(selectedAddress)
             }
@@ -51,7 +51,7 @@ class AddTaskActivity : AppCompatActivity() {
         setContentView(R.layout.activity_add_task)
 
         if (!Places.isInitialized()) {
-            Places.initialize(applicationContext, BuildConfig.MAPS_API_KEY)
+            Places.initializeWithNewPlacesApiEnabled(applicationContext, BuildConfig.MAPS_API_KEY)
         }
 
         val inputTitle = findViewById<EditText>(R.id.inputTitle)
@@ -64,9 +64,9 @@ class AddTaskActivity : AppCompatActivity() {
 
         inputLocation.isFocusable = false
         inputLocation.setOnClickListener {
-            val fields = listOf(Place.Field.ID, Place.Field.NAME, Place.Field.LAT_LNG, Place.Field.ADDRESS)
+            val fields = listOf(Place.Field.ID, Place.Field.DISPLAY_NAME, Place.Field.LOCATION, Place.Field.FORMATTED_ADDRESS)
             val intent = Autocomplete.IntentBuilder(AutocompleteActivityMode.OVERLAY, fields)
-                .setCountry("BG") // Ограничава търсенето в България
+                .setCountries(listOf("BG")) // Ограничава търсенето в България
                 .build(this)
 
             startAutocomplete.launch(intent)
