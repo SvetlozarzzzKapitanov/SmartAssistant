@@ -20,6 +20,10 @@ import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.*
 import com.google.android.gms.location.Priority
+import android.app.AlarmManager
+import android.app.PendingIntent
+import android.content.Context
+import android.os.Build
 
 class MainActivity : AppCompatActivity() {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
@@ -86,11 +90,17 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun requestLocationPermissions() {
-        ActivityCompat.requestPermissions(
-            this,
-            arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
-            1
+        val permissions = mutableListOf(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION
         )
+
+        // Ако телефонът е с Android 13 или по-нов, искаме и известия
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissions.add(Manifest.permission.POST_NOTIFICATIONS)
+        }
+
+        ActivityCompat.requestPermissions(this, permissions.toTypedArray(), 1)
     }
 
     // 1. Функция за взимане на текущия GPS и стартиране на изчислението
@@ -159,6 +169,7 @@ class MainActivity : AppCompatActivity() {
                         runOnUiThread {
                             adapter.notifyDataSetChanged()
                             storage.saveTasks(tasks)
+                            scheduleNotification(task)
                             val sdf = SimpleDateFormat("HH:mm", Locale.getDefault())
                             Toast.makeText(this@MainActivity, "Тръгни в ${sdf.format(Date(leaveTimeMillis))}", Toast.LENGTH_LONG).show()
                         }
@@ -169,5 +180,33 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         })
+    }
+    private fun scheduleNotification(task: Task) {
+        val leaveTime = task.leaveTime ?: return
+
+        val intent = Intent(this, NotificationReceiver::class.java).apply {
+            putExtra("TASK_TITLE", task.title)
+        }
+
+        val pendingIntent = PendingIntent.getBroadcast(
+            this,
+            task.id,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+
+        try {
+            // Връщаме истинското време (leaveTime), което Google сметна!
+            alarmManager.setExactAndAllowWhileIdle(
+                AlarmManager.RTC_WAKEUP,
+                leaveTime,
+                pendingIntent
+            )
+            Log.d("SmartAssistant_Debug", "Аларма заложена за: ${Date(leaveTime)}")
+        } catch (e: SecurityException) {
+            Log.e("SmartAssistant_Debug", "Няма разрешение за Exact Alarm")
+        }
     }
 }

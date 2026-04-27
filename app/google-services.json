@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "997639525851",
+    "project_id": "samiss",
+    "storage_bucket": "samiss.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:997639525851:android:3c5a7889c616f9a7bc83fe",
+        "android_client_info": {
+          "package_name": "com.sKapit.smartassistant"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyArPFRDYIsmphEliKxu-T2M2v3dYs2npxY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
