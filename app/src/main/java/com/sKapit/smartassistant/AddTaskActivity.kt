@@ -14,6 +14,8 @@ import com.google.android.libraries.places.api.model.Place
 import com.google.android.libraries.places.widget.Autocomplete
 import com.google.android.libraries.places.widget.AutocompleteActivity
 import com.google.android.libraries.places.widget.model.AutocompleteActivityMode
+import com.google.android.material.button.MaterialButtonToggleGroup
+import java.text.SimpleDateFormat
 import java.util.*
 
 class AddTaskActivity : AppCompatActivity() {
@@ -22,6 +24,10 @@ class AddTaskActivity : AppCompatActivity() {
     private var selectedLat: Double = 0.0
     private var selectedLng: Double = 0.0
     private var selectedAddress: String = ""
+    private var isEditMode = false
+    private var existingTaskId: Int = -1
+    private var calculatedLeaveTime: Long? = null
+    private val client = okhttp3.OkHttpClient()
 
     private val startAutocomplete = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -33,15 +39,7 @@ class AddTaskActivity : AppCompatActivity() {
                 selectedAddress = place.displayName ?: ""
                 selectedLat = place.location?.latitude ?: 0.0
                 selectedLng = place.location?.longitude ?: 0.0
-
                 findViewById<EditText>(R.id.inputLocation).setText(selectedAddress)
-            }
-        } else if (result.resultCode == AutocompleteActivity.RESULT_ERROR) {
-            val intent = result.data
-            if (intent != null) {
-                val status = Autocomplete.getStatusFromIntent(intent)
-                Log.e("PLACES_ERROR", "Status: ${status.statusMessage}")
-                Toast.makeText(this, "Google Error: ${status.statusMessage}", Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -58,48 +56,85 @@ class AddTaskActivity : AppCompatActivity() {
         val inputTime = findViewById<EditText>(R.id.inputTime)
         val inputLocation = findViewById<EditText>(R.id.inputLocation)
         val btnSave = findViewById<Button>(R.id.btnSave)
+        val toggleGroupTransport = findViewById<MaterialButtonToggleGroup>(R.id.toggleGroupTransport)
+        val topAppBar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.topAppBarAdd)
 
-        inputTime.isFocusable = false
-        inputTime.setOnClickListener { showTimePicker(inputTime) }
+        // Edit Mode Check
+        isEditMode = intent.getBooleanExtra("isEdit", false)
+        if (isEditMode) {
+            existingTaskId = intent.getIntExtra("id", -1)
+            inputTitle.setText(intent.getStringExtra("title"))
 
-        inputLocation.isFocusable = false
-        inputLocation.setOnClickListener {
-            val fields = listOf(Place.Field.ID, Place.Field.DISPLAY_NAME, Place.Field.LOCATION, Place.Field.FORMATTED_ADDRESS)
-            val intent = Autocomplete.IntentBuilder(AutocompleteActivityMode.OVERLAY, fields)
-                .setCountries(listOf("BG")) // Ограничава търсенето в България
-                .build(this)
+            selectedTimeInMillis = intent.getLongExtra("time", System.currentTimeMillis())
+            val sdf = SimpleDateFormat("HH:mm", Locale.getDefault())
+            inputTime.setText(sdf.format(Date(selectedTimeInMillis)))
 
-            startAutocomplete.launch(intent)
+            selectedAddress = intent.getStringExtra("location") ?: ""
+            inputLocation.setText(selectedAddress)
+            selectedLat = intent.getDoubleExtra("lat", 0.0)
+            selectedLng = intent.getDoubleExtra("lng", 0.0)
+
+            val travelMode = intent.getStringExtra("travelMode") ?: "driving"
+            val checkedId = when (travelMode) {
+                "walking" -> R.id.btnWalk
+                "transit" -> R.id.btnTransit
+                else -> R.id.btnDrive
+            }
+            toggleGroupTransport.check(checkedId)
+
+            btnSave.text = "Обнови задачата"
+            topAppBar.title = "Редактиране"
         }
 
+        topAppBar.setNavigationOnClickListener { finish() }
+        inputTime.setOnClickListener { showTimePicker(inputTime) }
+        inputLocation.setOnClickListener { launchPlacesAutocomplete() }
+
         btnSave.setOnClickListener {
-            if (selectedAddress.isEmpty()) {
-                Toast.makeText(this, "Please select a location", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
+            if (selectedAddress.isEmpty()) return@setOnClickListener
+
+            val travelMode = when (toggleGroupTransport.checkedButtonId) {
+                R.id.btnWalk -> "walking"
+                R.id.btnTransit -> "transit"
+                else -> "driving"
             }
 
-            val intent = Intent().apply {
+            val resultIntent = Intent().apply {
+                putExtra("id", existingTaskId)
                 putExtra("title", inputTitle.text.toString())
                 putExtra("time", selectedTimeInMillis)
                 putExtra("location", selectedAddress)
                 putExtra("lat", selectedLat)
                 putExtra("lng", selectedLng)
+                putExtra("travelMode", travelMode)
             }
-            setResult(RESULT_OK, intent)
+            setResult(RESULT_OK, resultIntent)
             finish()
         }
     }
 
+    private fun launchPlacesAutocomplete() {
+        val fields = listOf(Place.Field.ID, Place.Field.DISPLAY_NAME, Place.Field.LOCATION)
+        val intent = Autocomplete.IntentBuilder(AutocompleteActivityMode.OVERLAY, fields)
+            .setCountries(listOf("BG"))
+            .build(this)
+        startAutocomplete.launch(intent)
+    }
+
     private fun showTimePicker(timeEditText: EditText) {
         val calendar = Calendar.getInstance()
-        val timePickerDialog = TimePickerDialog(this, { _, hour, minute ->
-            timeEditText.setText(String.format(Locale.getDefault(), "%02d:%02d", hour, minute))
+        if (isEditMode) calendar.timeInMillis = selectedTimeInMillis
+
+        TimePickerDialog(this, { _, hour, minute ->
+            val displayTime = String.format(Locale.getDefault(), "%02d:%02d", hour, minute)
+            timeEditText.setText(displayTime)
+
             val targetCalendar = Calendar.getInstance().apply {
                 set(Calendar.HOUR_OF_DAY, hour)
                 set(Calendar.MINUTE, minute)
+                set(Calendar.SECOND, 0)
             }
             selectedTimeInMillis = targetCalendar.timeInMillis
-        }, calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE), true)
-        timePickerDialog.show()
+        }, calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE), true).show()
     }
 }

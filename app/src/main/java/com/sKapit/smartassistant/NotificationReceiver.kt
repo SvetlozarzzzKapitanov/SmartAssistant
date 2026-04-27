@@ -20,16 +20,16 @@ class NotificationReceiver : BroadcastReceiver() {
         createNotificationChannel(context)
 
         val builder = NotificationCompat.Builder(context, "smart_assistant_channel")
-            .setSmallIcon(R.mipmap.ic_launcher) // Можеш да смениш иконата по-късно
+            .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle("Време е да тръгвате!")
             .setContentText("Тръгнете сега за: $taskTitle")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
 
-        // Проверка за разрешение за известия (нужно за Android 13+)
+        // Check notification permissions for Android 13+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                return // Нямаме разрешение, не можем да покажем известието
+                return
             }
         }
 

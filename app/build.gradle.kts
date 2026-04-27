@@ -10,7 +10,7 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.SKapit.smartassistant"
+        applicationId = "com.sKapit.smartassistant"
         minSdk = 24
         targetSdk = 36
         versionCode = 1
@@ -34,6 +34,7 @@ android {
 
     buildFeatures {
         buildConfig = true // Задължително за по-новите версии на Android Studio
+        viewBinding = true
     }
     buildTypes {
         release {
@@ -53,16 +54,19 @@ android {
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
+    implementation(libs.firebase.auth)
+    implementation(libs.firebase.firestore)
     implementation(libs.material)
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
     implementation(libs.google.gson)
     implementation(libs.play.services.location)
+    implementation(libs.play.services.auth)
     implementation(libs.places)
     implementation(libs.okhttp.v530)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-    implementation(platform("com.google.firebase:firebase-bom:34.12.0"))
-    implementation("com.google.firebase:firebase-analytics")
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.analytics)
 }
