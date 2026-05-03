@@ -48,7 +48,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
-            android:hint="Желан час на пристигане"
+            android:hint="Дата и час на пристигане"
             app:startIconDrawable="@android:drawable/ic_menu_recent_history">
 
             <com.google.android.material.textfield.TextInputEditText
@@ -74,6 +74,16 @@
                 android:focusable="false"
                 android:clickable="true" />
         </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnBestTime"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:layout_gravity="end"
+            android:textColor="?attr/colorPrimary"
+            android:text="Анализирай натовареността с BestTime" />
 
         <com.google.android.material.button.MaterialButtonToggleGroup
             android:id="@+id/toggleGroupTransport"

@@ -10,5 +10,6 @@ data class Task(
     var longitude: Double = 0.0,
     var leaveTime: Long? = null,
     var travelMode: String = "driving",
-    var distanceText: String = "---"
+    var distanceText: String = "---",
+    var isExpanded: Boolean = false
 )

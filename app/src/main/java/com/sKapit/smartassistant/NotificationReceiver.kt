@@ -10,7 +10,9 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import android.Manifest
 import android.content.pm.PackageManager
+import android.graphics.Color
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.toColorInt
 
 class NotificationReceiver : BroadcastReceiver() {
 
@@ -20,7 +22,8 @@ class NotificationReceiver : BroadcastReceiver() {
         createNotificationChannel(context)
 
         val builder = NotificationCompat.Builder(context, "smart_assistant_channel")
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.ic_sam_notif)
+            .setColor("#FF4081".toColorInt())
             .setContentTitle("Време е да тръгвате!")
             .setContentText("Тръгнете сега за: $taskTitle")
             .setPriority(NotificationCompat.PRIORITY_HIGH)

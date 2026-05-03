@@ -8,4 +8,5 @@
     <color name="surfaceColor">#FFFFFF</color>
     <color name="textColorPrimary">#1F2937</color>
     <color name="textColorSecondary">#6B7280</color>
+    <color name="swipeBackground">#F3F4F6</color>
 </resources>

@@ -24,10 +24,11 @@ android {
         }
 
         val mapsApiKey = localProperties.getProperty("MAPS_API_KEY") ?: ""
+        val bestTimeApiKey = project.findProperty("BEST_TIME_API_KEY") ?: ""
 
         // Това прави ключа достъпен в Kotlin кода чрез BuildConfig.MAPS_API_KEY
         buildConfigField("String", "MAPS_API_KEY", "\"$mapsApiKey\"")
-
+        buildConfigField("String", "BEST_TIME_API_KEY", "\"$bestTimeApiKey\"")
         // Това прави ключа достъпен в AndroidManifest.xml чрез ${MAPS_API_KEY}
         manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
     }

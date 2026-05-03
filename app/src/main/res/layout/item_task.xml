@@ -7,104 +7,188 @@
     android:layout_height="wrap_content"
     android:layout_marginHorizontal="8dp"
     android:layout_marginVertical="6dp"
-    app:cardCornerRadius="12dp"
+    app:cardCornerRadius="16dp"
     app:cardElevation="2dp"
-    app:cardBackgroundColor="@color/surfaceColor">
+    app:cardBackgroundColor="@color/surfaceColor"
+    android:clickable="true"
+    android:focusable="true"
+    android:foreground="?android:attr/selectableItemBackground">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
+        android:orientation="vertical"
+        android:animateLayoutChanges="true"
         android:padding="16dp">
 
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical">
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
 
             <TextView
                 android:id="@+id/taskTitle"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textColor="#FFFFFF"
+                android:layout_toStartOf="@id/iconExpand"
+                android:layout_marginEnd="8dp"
+                android:textColor="@color/textColorPrimary"
                 android:textSize="18sp"
                 android:textStyle="bold"
-                tools:text="Заглавие на задачата" />
+                tools:text="Лекция по ПМУ" />
+
+            <ImageView
+                android:id="@+id/iconExpand"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:src="@drawable/ic_expand"
+                app:tint="@color/textColorSecondary" />
+        </RelativeLayout>
+
+        <TextView
+            android:id="@+id/taskArrivalTime"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textColor="@color/textColorPrimary"
+            android:textSize="15sp"
+            tools:text="11:30 · Днес" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="4dp"
+            android:gravity="center_vertical">
+
+            <ImageView
+                android:layout_width="14dp"
+                android:layout_height="14dp"
+                android:src="@drawable/ic_location"
+                app:tint="@color/textColorSecondary" />
 
             <TextView
                 android:id="@+id/taskLocation"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:textColor="#757575"
+                android:layout_marginStart="4dp"
+                android:textColor="@color/textColorSecondary"
                 android:textSize="14sp"
-                tools:text="Локация: ТУ София" />
-
-            <TextView
-                android:id="@+id/taskArrivalTime"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:textColor="#757575"
-                android:textSize="14sp"
-                tools:text="Пристигане: 14:00" />
-
-            <TextView
-                android:id="@+id/taskTravelMode"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:textColor="#757575"
-                android:textSize="12sp"
-                tools:text="Режим: Кола" />
-
-            <TextView
-                android:id="@+id/taskLeaveTime"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:textStyle="bold"
-                android:textSize="15sp"
-                tools:text="Тръгни в: 13:30" />
+                tools:text="Технически Университет - София" />
         </LinearLayout>
 
         <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:gravity="center"
-            android:orientation="vertical"
-            android:paddingStart="16dp">
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="2dp"
+            android:gravity="center_vertical">
 
             <ImageView
-                android:layout_width="12dp"
-                android:layout_height="12dp"
-                android:src="@android:drawable/radiobutton_on_background"
-                app:tint="#3F51B5" />
-
-            <View
-                android:layout_width="2dp"
-                android:layout_height="20dp"
-                android:background="#BDBDBD" />
+                android:id="@+id/iconTransportMode"
+                android:layout_width="14dp"
+                android:layout_height="14dp"
+                android:src="@drawable/ic_car"
+                app:tint="@color/textColorSecondary" />
 
             <TextView
                 android:id="@+id/taskDistance"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textColor="#757575"
+                android:layout_marginStart="4dp"
+                android:textColor="@color/textColorSecondary"
                 android:textSize="12sp"
-                tools:text="15 km" />
+                tools:text="7.8 km" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/taskStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            tools:text="Тръгни след 27 мин" />
+
+
+        <LinearLayout
+            android:id="@+id/layoutExpanded"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone"
+            tools:visibility="visible">
 
             <View
-                android:layout_width="2dp"
-                android:layout_height="20dp"
-                android:background="#BDBDBD" />
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginVertical="16dp"
+                android:background="#EAEAEA" />
 
-            <ImageView
-                android:layout_width="16dp"
-                android:layout_height="16dp"
-                android:src="@android:drawable/ic_dialog_map"
-                app:tint="#FF4081" />
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp">
+
+                <View
+                    android:id="@+id/routeLine"
+                    android:layout_width="1dp"
+                    android:layout_height="36dp"
+                    android:layout_marginStart="5.5dp"
+                    android:layout_marginTop="14dp"
+                    android:background="#CCCCCC" />
+
+                <ImageView
+                    android:id="@+id/dotCurrent"
+                    android:layout_width="10dp"
+                    android:layout_height="10dp"
+                    android:layout_marginLeft="0.9dp"
+                    android:layout_marginTop="7dp"
+                    android:src="@drawable/ic_circle"
+                    app:tint="#9E9E9E" />
+
+                <TextView
+                    android:id="@+id/txtFullLeaveTime"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_toEndOf="@id/dotCurrent"
+                    android:layout_marginStart="16dp"
+                    android:textSize="14sp"
+                    android:textColor="@color/textColorPrimary"
+                    tools:text="Тръгване: 11:03" />
+
+                <ImageView
+                    android:id="@+id/dotDestination"
+                    android:layout_width="10dp"
+                    android:layout_height="10dp"
+                    android:layout_below="@id/routeLine"
+                    android:layout_marginLeft="0.9dp"
+                    android:layout_marginTop="-2dp"
+                    android:src="@drawable/ic_circle"
+                    app:tint="#757575" />
+
+                <TextView
+                    android:id="@+id/txtFullArrivalTime"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@id/txtFullLeaveTime"
+                    android:layout_toEndOf="@id/dotDestination"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginTop="16dp"
+                    android:textSize="14sp"
+                    android:textColor="@color/textColorPrimary"
+                    tools:text="Пристигане: 11:30" />
+            </RelativeLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnNavigate"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:textColor="?attr/colorPrimary"
+                android:text="Стартирай Навигация" />
         </LinearLayout>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>
