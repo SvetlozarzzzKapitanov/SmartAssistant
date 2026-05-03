@@ -1,4 +1,12 @@
 <resources>
     <string name="app_name">SmartAssistant</string>
     <string name="default_web_client_id">997639525851-8uom38dejgjb9ds86gqs55r7fivc590c.apps.googleusercontent.com</string>
+
+    <string name="label_leave_time">Тръгване: %1$s</string>
+    <string name="label_arrival_time">Пристигане: %1$s</string>
+    <string name="placeholder_time">--</string>
+    <string name="calculating_route">Изчисляване на маршрут…</string>
+    <string name="status_late">Закъсняваш</string>
+    <string name="status_leave_in">Тръгни след %1$d мин</string>
+    <string name="status_leave_at">Тръгни в %1$s</string>
 </resources>

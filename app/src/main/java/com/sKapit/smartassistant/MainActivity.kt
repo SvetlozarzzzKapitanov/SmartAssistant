@@ -6,11 +6,9 @@ import android.view.View
 import android.widget.CalendarView
 import android.Manifest
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
-import android.widget.Button
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -38,37 +36,48 @@ class MainActivity : AppCompatActivity() {
     private val firebaseManager = FirebaseManager()
     private val networkManager = NetworkManager()
     private lateinit var notificationHelper: NotificationManagerHelper
-    private lateinit var calendarAdapter: TaskAdapter // Адаптер за задачите в календара
-    private val calendarTasks = mutableListOf<Task>() // Списък само за филтрираните задачи
-    private var selectedCalendarDateMillis: Long = System.currentTimeMillis() // Пазим избраната дата
+    private var calendarTasks = mutableListOf<Task>()
+    private lateinit var calendarAdapter: TaskAdapter
+    private var selectedCalendarDateMillis: Long = System.currentTimeMillis()
+    private lateinit var loadingProgress: android.widget.ProgressBar
 
     private val addTaskLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
-            val data = result.data
-            val taskId = data?.getIntExtra("id", -1) ?: -1
+            val data = result.data ?: return@registerForActivityResult
+            val taskId = data.getIntExtra("id", -1)
             val task = tasks.find { it.id == taskId } ?: Task(id = (System.currentTimeMillis() % Int.MAX_VALUE).toInt())
 
             task.apply {
-                title = data?.getStringExtra("title") ?: ""
-                time = data?.getLongExtra("time", 0L) ?: 0L
-                locationName = data?.getStringExtra("location") ?: ""
-                latitude = data?.getDoubleExtra("lat", 0.0) ?: 0.0
-                longitude = data?.getDoubleExtra("lng", 0.0) ?: 0.0
-                travelMode = data?.getStringExtra("travelMode") ?: "driving"
+                title = data.getStringExtra("title") ?: ""
+                time = data.getLongExtra("time", 0L)
+                locationName = data.getStringExtra("location") ?: ""
+                latitude = data.getDoubleExtra("lat", 0.0)
+                longitude = data.getDoubleExtra("lng", 0.0)
+                travelMode = data.getStringExtra("travelMode") ?: TravelMode.DRIVING.value
                 leaveTime = null
             }
 
             if (!tasks.contains(task)) tasks.add(task)
 
-            adapter.notifyDataSetChanged()
             firebaseManager.saveTask(task)
             calculateLeaveTimeForTask(task)
+            adapter.notifyDataSetChanged()
+            loadData()
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (firebaseManager.isUserLoggedIn()) {
+            loadData()
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        loadingProgress = findViewById(R.id.loadingProgress)
 
         // Initialize stylized header
         val txtAppTitle = findViewById<TextView>(R.id.txtAppTitle)
@@ -181,10 +190,6 @@ class MainActivity : AppCompatActivity() {
         }
         // ---------------------------------------------
 
-        if (firebaseManager.isUserLoggedIn()) {
-            loadData()
-        }
-
         requestLocationPermissions()
     }
 
@@ -209,18 +214,30 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun loadData() {
+        loadingProgress.visibility = View.VISIBLE
         firebaseManager.loadTasks(
             onSuccess = { loadedTasks ->
-                tasks.clear()
-                tasks.addAll(loadedTasks)
-                // Trigger travel time calculation for tasks without it
-                tasks.forEach { if (it.leaveTime == null || it.leaveTime == 0L) calculateLeaveTimeForTask(it) }
-                adapter.notifyDataSetChanged()
-                filterTasksForCalendar()
+                runOnUiThread {
+                    loadingProgress.visibility = View.GONE
+                    tasks.clear()
+                    tasks.addAll(loadedTasks)
+                    
+                    // Ensure the recycler view is visible
+                    findViewById<RecyclerView>(R.id.recyclerTasks).visibility = View.VISIBLE
+                    findViewById<View>(R.id.layoutCalendarTab).visibility = View.GONE
+                    
+                    // Trigger travel time calculation for tasks without it
+                    tasks.forEach { if (it.leaveTime == null || it.leaveTime == 0L) calculateLeaveTimeForTask(it) }
+                    adapter.notifyDataSetChanged()
+                    filterTasksForCalendar()
+                }
             },
             onFailure = { 
-                Log.e("MainActivity", "Failed to load tasks", it)
-                android.widget.Toast.makeText(this, "Грешка при зареждане на данните", android.widget.Toast.LENGTH_SHORT).show()
+                runOnUiThread {
+                    loadingProgress.visibility = View.GONE
+                    Log.e("MainActivity", "Failed to load tasks", it)
+                    android.widget.Toast.makeText(this, "Грешка при зареждане на данните", android.widget.Toast.LENGTH_SHORT).show()
+                }
             }
         )
     }

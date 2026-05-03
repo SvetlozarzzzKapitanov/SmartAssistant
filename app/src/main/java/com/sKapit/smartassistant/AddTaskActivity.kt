@@ -247,7 +247,7 @@ class AddTaskActivity : AppCompatActivity() {
         }
 
         // ПРОВЕРКА ЗА КЛЮЧ
-        if (BuildConfig.BEST_TIME_API_KEY == "null" || BuildConfig.BEST_TIME_API_KEY.isEmpty()) {
+        if (BuildConfig.BEST_TIME_API_KEY.isEmpty()) {
             Toast.makeText(this, "BestTime API ключът не е конфигуриран!", Toast.LENGTH_SHORT).show()
             return
         }
