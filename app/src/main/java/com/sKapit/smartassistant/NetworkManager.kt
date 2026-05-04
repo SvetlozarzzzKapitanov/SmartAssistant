@@ -1,5 +1,6 @@
 package com.sKapit.smartassistant
 
+import android.content.Context
 import android.util.Log
 import okhttp3.*
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
@@ -8,16 +9,16 @@ import java.io.IOException
 import java.util.Calendar
 
 class NetworkManager(
+    private val context: Context,
     private val mapsApiKey: String = BuildConfig.MAPS_API_KEY,
     private val bestTimeApiKey: String = BuildConfig.BEST_TIME_API_KEY
 ) {
 
     private val client = OkHttpClient()
 
+    private fun getString(resId: Int): String = context.getString(resId)
+
     // --- Google Distance Matrix API ---
-    /**
-     * Fetches travel time between user location and task destination.
-     */
     fun fetchTravelTime(
         task: Task,
         userLat: Double,
@@ -25,6 +26,11 @@ class NetworkManager(
         onSuccess: (Task) -> Unit,
         onError: (String) -> Unit
     ) {
+        if (mapsApiKey.isEmpty()) {
+            onError(getString(R.string.error_api_key_not_configured))
+            return
+        }
+
         val url = "https://maps.googleapis.com/maps/api/distancematrix/json" +
                 "?origins=$userLat,$userLng" +
                 "&destinations=${task.latitude},${task.longitude}" +
@@ -35,26 +41,44 @@ class NetworkManager(
 
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
-                onError(e.message ?: "Network error")
+                onError(e.message ?: getString(R.string.error_network_generic))
             }
 
             override fun onResponse(call: Call, response: Response) {
                 val responseBody = response.body?.string()
-                if (responseBody != null) {
+                if (response.isSuccessful && responseBody != null) {
                     try {
                         val jsonObject = JSONObject(responseBody)
-                        val rows = jsonObject.getJSONArray("rows")
-                        val elements = rows.getJSONObject(0).getJSONArray("elements")
-
-                        val status = elements.getJSONObject(0).getString("status")
-                        if (status == "ZERO_RESULTS") {
-                            onError("Няма намерен маршрут")
+                        val status = jsonObject.optString("status")
+                        
+                        if (status == "REQUEST_DENIED" || status == "OVER_QUERY_LIMIT") {
+                            onError(jsonObject.optString("error_message", getString(R.string.error_parsing_google)))
                             return
                         }
 
-                        val duration = elements.getJSONObject(0).getJSONObject("duration")
+                        val rows = jsonObject.getJSONArray("rows")
+                        if (rows.length() == 0) {
+                            onError(getString(R.string.error_no_route))
+                            return
+                        }
+                        
+                        val elements = rows.getJSONObject(0).getJSONArray("elements")
+                        val element = elements.getJSONObject(0)
+                        val elementStatus = element.getString("status")
+                        
+                        if (elementStatus == "ZERO_RESULTS" || elementStatus == "NOT_FOUND") {
+                            onError(getString(R.string.error_no_route))
+                            return
+                        }
+
+                        if (elementStatus != "OK") {
+                            onError(getString(R.string.error_parsing_google))
+                            return
+                        }
+
+                        val duration = element.getJSONObject("duration")
                         val travelTimeSeconds = duration.getLong("value")
-                        val distance = elements.getJSONObject(0).getJSONObject("distance")
+                        val distance = element.getJSONObject("distance")
                         val distanceText = distance.getString("text")
 
                         task.distanceText = distanceText
@@ -65,20 +89,17 @@ class NetworkManager(
                         onSuccess(task)
 
                     } catch (e: Exception) {
-                        onError("Грешка при обработка на данните от Google")
+                        onError(getString(R.string.error_parsing_google))
                         Log.e("NetworkManager", "Parsing error: ${e.message}")
                     }
                 } else {
-                    onError("Празен отговор от сървъра")
+                    onError(getString(R.string.error_empty_response))
                 }
             }
         })
     }
 
     // --- BestTime API ---
-    /**
-     * Fetches venue busyness forecast from BestTime API.
-     */
     fun fetchBestTimeData(
         venueName: String,
         venueAddress: String,
@@ -86,8 +107,12 @@ class NetworkManager(
         onSuccess: (List<HourlyForecast>) -> Unit,
         onError: (String) -> Unit
     ) {
+        if (bestTimeApiKey.isEmpty()) {
+            onError(getString(R.string.error_api_key_not_configured))
+            return
+        }
+
         val cal = Calendar.getInstance().apply { timeInMillis = targetTimeInMillis }
-        // BestTime uses 0 for Monday, so we convert from Calendar.DAY_OF_WEEK
         val targetDayInt = (cal.get(Calendar.DAY_OF_WEEK) + 5) % 7
 
         val urlBuilder = "https://besttime.app/api/v1/forecasts".toHttpUrlOrNull()?.newBuilder()
@@ -96,10 +121,9 @@ class NetworkManager(
         urlBuilder?.addQueryParameter("venue_address", venueAddress)
 
         val url = urlBuilder?.build().toString()
-        // BestTime forecasts endpoint requires a POST request, even if empty
-        val requestBody = okhttp3.FormBody.Builder().build()
+        val requestBody = FormBody.Builder().build()
 
-        val request = okhttp3.Request.Builder()
+        val request = Request.Builder()
             .url(url)
             .post(requestBody)
             .build()
@@ -107,7 +131,7 @@ class NetworkManager(
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
                 Log.e("BestTimeAPI_Network", "Мрежова грешка: ${e.message}", e)
-                onError("Грешка при връзка с BestTime API")
+                onError(getString(R.string.error_network_generic))
             }
 
             override fun onResponse(call: Call, response: Response) {
@@ -116,6 +140,11 @@ class NetworkManager(
                 if (response.isSuccessful && responseBody != null) {
                     try {
                         val jsonResponse = JSONObject(responseBody)
+                        if (jsonResponse.optString("status") == "error") {
+                            onError(jsonResponse.optString("message", getString(R.string.error_fetching_venue)))
+                            return
+                        }
+
                         val weekAnalysis = jsonResponse.getJSONArray("analysis")
 
                         var dayForecast: JSONObject? = null
@@ -150,15 +179,15 @@ class NetworkManager(
                             }
                             onSuccess(hourlyList)
                         } else {
-                            onError("Няма данни за избрания ден")
+                            onError(getString(R.string.error_no_data_for_day))
                         }
                     } catch (e: Exception) {
-                        onError("Грешка при обработка на данните от BestTime")
+                        onError(getString(R.string.error_parsing_besttime))
                         Log.e("NetworkManager", "BestTime parsing error: ${e.message}")
                     }
                 } else {
                     Log.e("BestTimeAPI_Error", "HTTP ${response.code}: $responseBody")
-                    onError("Неуспешно извличане на данни за обекта")
+                    onError(getString(R.string.error_fetching_venue))
                 }
             }
         })

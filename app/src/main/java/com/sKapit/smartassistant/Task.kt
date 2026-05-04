@@ -1,6 +1,7 @@
 package com.sKapit.smartassistant
 
-import android.graphics.Color
+import android.content.Context
+import androidx.core.content.ContextCompat
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -28,7 +29,14 @@ data class Task(
     var leaveTime: Long? = null,
     var travelMode: String = TravelMode.DRIVING.value,
     var distanceText: String = "---",
-    var isExpanded: Boolean = false
+    var isExpanded: Boolean = false,
+    var startLocationName: String? = null,
+    var startLatitude: Double? = null,
+    var startLongitude: Double? = null,
+    var resolvedStartLocationName: String? = null,
+    var routeSourceType: String = "gps",
+    var routeWarning: String? = null,
+    var hasRouteConflict: Boolean = false
 ) {
     companion object {
         private val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
@@ -56,18 +64,30 @@ data class Task(
         }
     }
 
-    fun getStatusData(): Pair<String, Int> {
-        val leaveTimeMillis = leaveTime ?: return Pair("Изчисляване на маршрут...", Color.parseColor("#9E9E9E"))
+    fun getStatusData(context: Context): Pair<String, Int> {
+        val leaveTimeMillis = leaveTime ?: return Pair(
+            context.getString(R.string.status_calculating),
+            ContextCompat.getColor(context, R.color.status_calculating)
+        )
         val now = System.currentTimeMillis()
         val diffMillis = leaveTimeMillis - now
         val diffMinutes = TimeUnit.MILLISECONDS.toMinutes(diffMillis)
 
         return when {
-            diffMinutes < 0 -> Pair("Закъсняваш", Color.parseColor("#E57373"))
-            diffMinutes in 0..60 -> Pair("Тръгни след $diffMinutes мин", Color.parseColor("#4CAF50"))
+            diffMinutes < 0 -> Pair(
+                context.getString(R.string.status_late),
+                ContextCompat.getColor(context, R.color.status_late)
+            )
+            diffMinutes in 0..60 -> Pair(
+                context.getString(R.string.status_leave_in, diffMinutes),
+                ContextCompat.getColor(context, R.color.status_on_time)
+            )
             else -> {
                 val leaveStr = timeFormat.format(Date(leaveTimeMillis))
-                Pair("Тръгни в $leaveStr", Color.parseColor("#757575"))
+                Pair(
+                    context.getString(R.string.status_leave_at, leaveStr),
+                    ContextCompat.getColor(context, R.color.status_future)
+                )
             }
         }
     }

@@ -9,4 +9,9 @@
     <color name="textColorPrimary">#1F2937</color>
     <color name="textColorSecondary">#6B7280</color>
     <color name="swipeBackground">#F3F4F6</color>
+
+    <color name="status_calculating">#9E9E9E</color>
+    <color name="status_late">#E57373</color>
+    <color name="status_on_time">#4CAF50</color>
+    <color name="status_future">#757575</color>
 </resources>
