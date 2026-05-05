@@ -13,6 +13,8 @@
     <string name="title_new_planning">Ново планиране</string>
     <string name="hint_event_name">Име на събитието</string>
     <string name="hint_arrival_time">Дата и час на пристигане</string>
+    <string name="hint_duration">Продължителност (минути)</string>
+    <string name="default_duration">30</string>
     <string name="hint_start_location_optional">Начална локация (по избор)</string>
     <string name="hint_destination">Дестинация</string>
     <string name="btn_analyze_best_time">Анализирай натовареността с BestTime</string>
@@ -46,7 +48,7 @@
     <string name="route_badge_chain"> · Последователна</string>
     <string name="route_badge_gps"> · GPS</string>
     <string name="route_conflict">Конфликт в графика</string>
-    <string name="route_conflict_warning">Невъзможен маршрут: предходната задача е твърде късно.</string>
+    <string name="route_conflict_warning_detailed">Конфликт! Трябва да тръгнете в %1$s, но предната задача свършва в %2$s</string>
     <string name="start_summary_manual">Старт: %1$s</string>
     <string name="start_summary_chain">След: %1$s</string>
     <string name="start_summary_gps">Старт: Текуща локация</string>

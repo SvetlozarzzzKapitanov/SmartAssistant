@@ -65,6 +65,10 @@ dependencies {
     implementation(libs.play.services.auth)
     implementation(libs.places)
     implementation(libs.okhttp.v530)
+    
+    // WorkManager
+    implementation("androidx.work:work-runtime-ktx:2.10.0")
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

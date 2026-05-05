@@ -31,12 +31,27 @@ class NetworkManager(
             return
         }
 
-        val url = "https://maps.googleapis.com/maps/api/distancematrix/json" +
-                "?origins=$userLat,$userLng" +
-                "&destinations=${task.latitude},${task.longitude}" +
-                "&mode=${task.travelMode}" +
-                "&key=$mapsApiKey"
+        val urlBuilder = "https://maps.googleapis.com/maps/api/distancematrix/json".toHttpUrlOrNull()?.newBuilder()
+            ?.addQueryParameter("origins", "$userLat,$userLng")
+            ?.addQueryParameter("destinations", "${task.latitude},${task.longitude}")
+            ?.addQueryParameter("mode", task.travelMode)
+            ?.addQueryParameter("key", mapsApiKey)
 
+        // Трафик данни се връщат само за режим 'driving' и при наличие на departure_time
+        if (task.travelMode == "driving") {
+            val now = System.currentTimeMillis()
+            val estimatedDeparture = task.time - (60 * 60 * 1000) // 1 час по-рано
+            
+            val departureParam = if (estimatedDeparture > now) {
+                (estimatedDeparture / 1000).toString()
+            } else {
+                "now"
+            }
+            urlBuilder?.addQueryParameter("departure_time", departureParam)
+            urlBuilder?.addQueryParameter("traffic_model", "best_guess")
+        }
+
+        val url = urlBuilder?.build().toString()
         val request = Request.Builder().url(url).build()
 
         client.newCall(request).enqueue(object : Callback {
@@ -51,37 +66,34 @@ class NetworkManager(
                         val jsonObject = JSONObject(responseBody)
                         val status = jsonObject.optString("status")
                         
-                        if (status == "REQUEST_DENIED" || status == "OVER_QUERY_LIMIT") {
+                        if (status != "OK") {
                             onError(jsonObject.optString("error_message", getString(R.string.error_parsing_google)))
                             return
                         }
 
                         val rows = jsonObject.getJSONArray("rows")
-                        if (rows.length() == 0) {
-                            onError(getString(R.string.error_no_route))
-                            return
-                        }
-                        
                         val elements = rows.getJSONObject(0).getJSONArray("elements")
                         val element = elements.getJSONObject(0)
                         val elementStatus = element.getString("status")
                         
-                        if (elementStatus == "ZERO_RESULTS" || elementStatus == "NOT_FOUND") {
+                        if (elementStatus != "OK") {
                             onError(getString(R.string.error_no_route))
                             return
                         }
 
-                        if (elementStatus != "OK") {
-                            onError(getString(R.string.error_parsing_google))
-                            return
+                        // Проверяваме за duration_in_traffic (ако е налично), иначе ползваме стандартното duration
+                        val durationObj = if (element.has("duration_in_traffic")) {
+                            element.getJSONObject("duration_in_traffic")
+                        } else {
+                            element.getJSONObject("duration")
                         }
 
-                        val duration = element.getJSONObject("duration")
-                        val travelTimeSeconds = duration.getLong("value")
-                        val distance = element.getJSONObject("distance")
-                        val distanceText = distance.getString("text")
+                        val travelTimeSeconds = durationObj.getLong("value")
+                        val distanceText = element.getJSONObject("distance").getString("text")
 
                         task.distanceText = distanceText
+                        
+                        // Буфер от 10 минути за подготовка/паркиране
                         val bufferSeconds = 10 * 60
                         task.leaveTime =
                             task.time - (travelTimeSeconds * 1000) - (bufferSeconds * 1000)

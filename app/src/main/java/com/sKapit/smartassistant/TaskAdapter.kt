@@ -53,9 +53,13 @@ class TaskAdapter(
             title.text = task.title
             location.text = task.locationName
             distance.text = task.distanceText
-            arrivalTime.text = task.getFormattedArrivalTime()
+            
+            // Показваме интервал: "10:00 - 11:00 · Днес"
+            val startTime = timeFormatter.format(Date(task.time))
+            val endTime = timeFormatter.format(Date(task.getEndTime()))
+            val dateLabel = task.getFormattedArrivalTime().split(" · ").lastOrNull() ?: ""
+            arrivalTime.text = "$startTime - $endTime · $dateLabel"
 
-            // Icon logic
             val modeIconRes = when (task.travelMode) {
                 TravelMode.WALKING.value -> R.drawable.ic_walk
                 TravelMode.TRANSIT.value -> R.drawable.ic_public_transport
@@ -63,7 +67,6 @@ class TaskAdapter(
             }
             iconTransportMode.setImageResource(modeIconRes)
 
-            // Status and Colors using Task model logic
             val (statusText, statusColor) = task.getStatusData(context)
 
             val routeBadge = when (task.routeSourceType) {
@@ -80,7 +83,6 @@ class TaskAdapter(
                 status.setTextColor(statusColor)
             }
 
-            // Time details
             task.leaveTime?.takeIf { it > 0 }?.let { leaveTime ->
                 val routeTypeText = when (task.routeSourceType) {
                     "manual" -> context.getString(R.string.route_manual)
@@ -100,10 +102,9 @@ class TaskAdapter(
 
                 if (task.hasRouteConflict) {
                     txtRouteWarning.visibility = View.VISIBLE
-                    txtRouteWarning.text = task.routeWarning ?: context.getString(R.string.route_conflict)
+                    txtRouteWarning.text = task.routeWarning
                 } else {
                     txtRouteWarning.visibility = View.GONE
-                    txtRouteWarning.text = ""
                 }
             } ?: run {
                 txtRouteType.text = context.getString(R.string.route_calculating)
@@ -112,7 +113,6 @@ class TaskAdapter(
                 txtRouteWarning.visibility = View.GONE
             }
 
-            // Expand / Collapse logic
             layoutExpanded.isVisible = task.isExpanded
             iconExpand.rotation = if (task.isExpanded) 180f else 0f
 
@@ -130,7 +130,6 @@ class TaskAdapter(
                 onNavigateClick(task)
             }
 
-            // Cascade animation
             if (position > lastPosition) {
                 animateEntry(itemView, position)
                 lastPosition = position

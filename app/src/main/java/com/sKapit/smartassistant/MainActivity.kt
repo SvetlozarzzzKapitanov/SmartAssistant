@@ -29,7 +29,16 @@ import android.widget.ProgressBar
 import android.widget.Toast
 import android.animation.ObjectAnimator
 import android.animation.PropertyValuesHolder
+import androidx.work.Constraints
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
+import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Date
+import java.util.Locale
+import java.util.concurrent.TimeUnit
 
 class MainActivity : AppCompatActivity() {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
@@ -50,6 +59,7 @@ class MainActivity : AppCompatActivity() {
             putExtra("id", clickedTask.id)
             putExtra("title", clickedTask.title)
             putExtra("time", clickedTask.time)
+            putExtra("duration", clickedTask.durationMinutes)
             putExtra("location", clickedTask.locationName)
             putExtra("lat", clickedTask.latitude)
             putExtra("lng", clickedTask.longitude)
@@ -76,6 +86,7 @@ class MainActivity : AppCompatActivity() {
             task.apply {
                 title = data.getStringExtra("title") ?: ""
                 time = data.getLongExtra("time", 0L)
+                durationMinutes = data.getIntExtra("duration", 30)
                 locationName = data.getStringExtra("location") ?: ""
                 latitude = data.getDoubleExtra("lat", 0.0)
                 longitude = data.getDoubleExtra("lng", 0.0)
@@ -86,10 +97,7 @@ class MainActivity : AppCompatActivity() {
                 val incomingStartLat = data.getDoubleExtra("startLat", 0.0)
                 val incomingStartLng = data.getDoubleExtra("startLng", 0.0)
 
-                val hasManualStart =
-                    !incomingStartName.isNullOrBlank() &&
-                            incomingStartLat != 0.0 &&
-                            incomingStartLng != 0.0
+                val hasManualStart = !incomingStartName.isNullOrBlank() && incomingStartLat != 0.0 && incomingStartLng != 0.0
 
                 startLocationName = if (hasManualStart) incomingStartName else null
                 startLatitude = if (hasManualStart) incomingStartLat else null
@@ -130,25 +138,17 @@ class MainActivity : AppCompatActivity() {
         networkManager = NetworkManager(this)
         loadingProgress = findViewById(R.id.loadingProgress)
 
-        // Initialize stylized header
         val txtAppTitle = findViewById<TextView>(R.id.txtAppTitle)
-        
         val accentColor = ContextCompat.getColor(this, R.color.colorAccent)
         val primaryTextColor = ContextCompat.getColor(this, R.color.textColorPrimary)
-
         val fullTitle = "Smart Action Manager"
         val spannable = SpannableString(fullTitle)
-
-        // Highlight first letters (S.A.M)
         spannable.setSpan(ForegroundColorSpan(accentColor), 0, 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
         spannable.setSpan(ForegroundColorSpan(primaryTextColor), 1, 6, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-        
         spannable.setSpan(ForegroundColorSpan(accentColor), 6, 7, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
         spannable.setSpan(ForegroundColorSpan(primaryTextColor), 7, 13, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-
         spannable.setSpan(ForegroundColorSpan(accentColor), 13, 14, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
         spannable.setSpan(ForegroundColorSpan(primaryTextColor), 14, fullTitle.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-
         txtAppTitle.text = spannable
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
@@ -157,19 +157,15 @@ class MainActivity : AppCompatActivity() {
         adapter = TaskAdapter(
             tasks = tasks,
             onTaskEditClick = onTaskEdit,
-            onNavigateClick = { clickedTask ->
-                startGoogleMapsNavigation(clickedTask)
-            }
+            onNavigateClick = { startGoogleMapsNavigation(it) }
         )
 
         val recyclerView = findViewById<RecyclerView>(R.id.recyclerTasks)
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = adapter
 
-        // Setup separate list for calendar view filtering
         val recyclerCalendarTasks = findViewById<RecyclerView>(R.id.recyclerCalendarTasks)
         recyclerCalendarTasks.layoutManager = LinearLayoutManager(this)
-
         calendarAdapter = TaskAdapter(
             tasks = calendarTasks,
             onTaskEditClick = onTaskEdit,
@@ -180,37 +176,22 @@ class MainActivity : AppCompatActivity() {
         setupSwipeToDelete(recyclerView)
 
         val btnAddTask = findViewById<FloatingActionButton>(R.id.btnAddTask)
-
-        // Apply "breathing" animation to the FAB
-        val scaleDown = ObjectAnimator.ofPropertyValuesHolder(
-            btnAddTask,
-            PropertyValuesHolder.ofFloat("scaleX", 0.93f),
-            PropertyValuesHolder.ofFloat("scaleY", 0.93f)
-        )
-        scaleDown.duration = 1000
-        scaleDown.repeatCount = ObjectAnimator.INFINITE
-        scaleDown.repeatMode = ObjectAnimator.REVERSE
-        scaleDown.start()
-
         btnAddTask.setOnClickListener {
             addTaskLauncher.launch(Intent(this, AddTaskActivity::class.java))
         }
 
-        val layoutCalendarTab = findViewById<View>(R.id.layoutCalendarTab)
         val bottomNavigation = findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(R.id.bottomNavigation)
-
-        // Handle navigation between Tasks and Calendar tabs
         bottomNavigation.setOnItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.nav_tasks -> {
                     recyclerView.visibility = View.VISIBLE
-                    layoutCalendarTab.visibility = View.GONE
+                    findViewById<View>(R.id.layoutCalendarTab).visibility = View.GONE
                     btnAddTask.show()
                     true
                 }
                 R.id.nav_calendar -> {
                     recyclerView.visibility = View.GONE
-                    layoutCalendarTab.visibility = View.VISIBLE
+                    findViewById<View>(R.id.layoutCalendarTab).visibility = View.VISIBLE
                     btnAddTask.hide()
                     true
                 }
@@ -224,32 +205,61 @@ class MainActivity : AppCompatActivity() {
             cal.set(year, month, dayOfMonth, 0, 0, 0)
             cal.set(Calendar.MILLISECOND, 0)
             selectedCalendarDateMillis = cal.timeInMillis
-
             filterTasksForCalendar()
         }
-        // ---------------------------------------------
 
         requestLocationPermissions()
+        setupTrafficUpdateWorker()
+    }
+
+    private fun setupTrafficUpdateWorker() {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
+        val trafficRequest = PeriodicWorkRequestBuilder<TrafficUpdateWorker>(30, TimeUnit.MINUTES)
+            .setConstraints(constraints)
+            .build()
+
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            "TrafficUpdateWork",
+            ExistingPeriodicWorkPolicy.KEEP,
+            trafficRequest
+        )
     }
 
     private fun startGoogleMapsNavigation(task: Task) {
+        val origin = when {
+            task.startLatitude != null && task.startLongitude != null ->
+                "${task.startLatitude},${task.startLongitude}"
+            task.routeSourceType == "chain" -> {
+                val dayTasks = tasks.filter { isSameDay(it.time, task.time) }.sortedBy { it.time }
+                val index = dayTasks.indexOfFirst { it.id == task.id }
+                if (index > 0) "${dayTasks[index - 1].latitude},${dayTasks[index - 1].longitude}" else null
+            }
+            else -> null
+        }
+
+        if (origin != null) {
+            val uriBuilder = Uri.parse("https://www.google.com/maps/dir/?api=1")
+                .buildUpon()
+                .appendQueryParameter("origin", origin)
+                .appendQueryParameter("destination", "${task.latitude},${task.longitude}")
+                .appendQueryParameter("travelmode", task.travelMode)
+            val intent = Intent(Intent.ACTION_VIEW, uriBuilder.build()).apply { setPackage("com.google.android.apps.maps") }
+            startActivity(intent)
+            return
+        }
+
         val mapMode = when (task.travelMode) {
             "walking" -> "w"
             "transit" -> "r"
             "bicycling" -> "b"
             else -> "d"
         }
-
         val gmmIntentUri = Uri.parse("google.navigation:q=${task.latitude},${task.longitude}&mode=$mapMode")
-        val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri)
-        mapIntent.setPackage("com.google.android.apps.maps")
-
-        if (mapIntent.resolveActivity(packageManager) != null) {
-            startActivity(mapIntent)
-        } else {
-            val browserUri = Uri.parse("https://www.google.com/maps/dir/?api=1&destination=${task.latitude},${task.longitude}&travelmode=${task.travelMode}")
-            startActivity(Intent(Intent.ACTION_VIEW, browserUri))
-        }
+        val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri).apply { setPackage("com.google.android.apps.maps") }
+        startActivity(mapIntent)
     }
 
     private fun loadData() {
@@ -260,140 +270,53 @@ class MainActivity : AppCompatActivity() {
                     loadingProgress.visibility = View.GONE
                     tasks.clear()
                     tasks.addAll(loadedTasks)
-                    
-                    // Ensure the recycler view is visible
-                    findViewById<RecyclerView>(R.id.recyclerTasks).visibility = View.VISIBLE
-                    findViewById<View>(R.id.layoutCalendarTab).visibility = View.GONE
-
-                    val uniqueDays = tasks.map { task ->
-                        val cal = Calendar.getInstance().apply {
-                            timeInMillis = task.time
-                            set(Calendar.HOUR_OF_DAY, 0)
-                            set(Calendar.MINUTE, 0)
-                            set(Calendar.SECOND, 0)
-                            set(Calendar.MILLISECOND, 0)
-                        }
-                        cal.timeInMillis
-                    }.distinct()
-
-                    uniqueDays.forEach { dayMillis ->
-                        recalculateRoutesForDay(dayMillis)
-                    }
                     adapter.notifyDataSetChanged()
+                    
+                    tasks.map { task ->
+                        Calendar.getInstance().apply {
+                            timeInMillis = task.time
+                            set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+                        }.timeInMillis
+                    }.distinct().forEach { recalculateRoutesForDay(it) }
+                    
                     filterTasksForCalendar()
                 }
             },
             onFailure = { 
                 runOnUiThread {
                     loadingProgress.visibility = View.GONE
-                    Log.e("MainActivity", "Failed to load tasks", it)
                     Toast.makeText(this, getString(R.string.error_loading_data), Toast.LENGTH_SHORT).show()
                 }
             }
         )
     }
 
-    private fun setupSwipeToDelete(recyclerView: RecyclerView) {
-        val swipeCallback = SwipeToDeleteCallback(this) { position ->
-            val taskToDelete = tasks[position]
-            MaterialAlertDialogBuilder(this)
-                .setTitle(getString(R.string.dialog_delete_task_title))
-                .setMessage(getString(R.string.dialog_delete_task_message, taskToDelete.title))
-                .setCancelable(false)
-                .setPositiveButton(getString(R.string.btn_delete)) { _, _ ->
-                    firebaseManager.deleteTask(
-                        taskId = taskToDelete.id,
-                        onSuccess = {
-                            notificationHelper.cancelNotification(taskToDelete.id)
-
-                            val deletedTaskTime = taskToDelete.time
-
-                            tasks.removeAt(position)
-                            adapter.notifyItemRemoved(position)
-
-                            recalculateRoutesForDay(deletedTaskTime)
-                            filterTasksForCalendar()
-                        },
-                        onFailure = { 
-                            adapter.notifyItemChanged(position)
-                            Toast.makeText(this, getString(R.string.error_loading_data), Toast.LENGTH_SHORT).show()
-                        }
-                    )
-                }
-                .setNegativeButton(getString(R.string.btn_cancel)) { dialog, _ ->
-                    adapter.notifyItemChanged(position)
-                    dialog.dismiss()
-                }
-                .show()
-        }
-        ItemTouchHelper(swipeCallback).attachToRecyclerView(recyclerView)
-    }
-
-    private fun requestLocationPermissions() {
-        val permissions = mutableListOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            permissions.add(Manifest.permission.POST_NOTIFICATIONS)
-        }
-        ActivityCompat.requestPermissions(this, permissions.toTypedArray(), 1)
-    }
-    private fun filterTasksForCalendar() {
-        val targetCal = Calendar.getInstance()
-        targetCal.timeInMillis = selectedCalendarDateMillis
-        val targetYear = targetCal.get(Calendar.YEAR)
-        val targetDayOfYear = targetCal.get(Calendar.DAY_OF_YEAR)
-
-        calendarTasks.clear()
-
-        for (task in tasks) {
-            val taskCal = Calendar.getInstance()
-            taskCal.timeInMillis = task.time
-
-            if (taskCal.get(Calendar.YEAR) == targetYear &&
-                taskCal.get(Calendar.DAY_OF_YEAR) == targetDayOfYear) {
-                calendarTasks.add(task)
-            }
-        }
-
-        calendarAdapter.notifyDataSetChanged()
-    }
-
     private fun recalculateRoutesForDay(dayMillis: Long) {
-        val dayTasks = tasks
-            .filter { isSameDay(it.time, dayMillis) }
-            .sortedBy { it.time }
-
+        val dayTasks = tasks.filter { isSameDay(it.time, dayMillis) }.sortedBy { it.time }
         if (dayTasks.isEmpty()) return
 
         fun calculateNext(index: Int, originLat: Double, originLng: Double) {
-            if (index >= dayTasks.size) {
-                adapter.notifyDataSetChanged()
-                filterTasksForCalendar()
-                return
-            }
+            if (index >= dayTasks.size) return
 
             val task = dayTasks[index]
-
             val hasManualStart = task.startLatitude != null && task.startLongitude != null
-
             val actualOriginLat = if (hasManualStart) task.startLatitude!! else originLat
             val actualOriginLng = if (hasManualStart) task.startLongitude!! else originLng
 
-            when {
-                hasManualStart -> {
-                    task.routeSourceType = "manual"
-                    task.resolvedStartLocationName = task.startLocationName ?: getString(R.string.manual_start_point)
-                }
+            if (actualOriginLat == 0.0 && actualOriginLng == 0.0) {
+                calculateNext(index + 1, task.latitude, task.longitude)
+                return
+            }
 
-                index == 0 -> {
-                    task.routeSourceType = "gps"
-                    task.resolvedStartLocationName = getString(R.string.current_location)
-                }
-
-                else -> {
-                    val previousTask = dayTasks[index - 1]
-                    task.routeSourceType = "chain"
-                    task.resolvedStartLocationName = previousTask.locationName
-                }
+            task.routeSourceType = when {
+                hasManualStart -> "manual"
+                index == 0 -> "gps"
+                else -> "chain"
+            }
+            task.resolvedStartLocationName = when (task.routeSourceType) {
+                "manual" -> task.startLocationName ?: getString(R.string.manual_start_point)
+                "gps" -> getString(R.string.current_location)
+                else -> dayTasks[index - 1].locationName
             }
 
             networkManager.fetchTravelTime(
@@ -402,92 +325,86 @@ class MainActivity : AppCompatActivity() {
                 userLng = actualOriginLng,
                 onSuccess = { updatedTask ->
                     runOnUiThread {
-                        val isChain = updatedTask.routeSourceType == "chain"
-                        val previousTask = if (index > 0) dayTasks[index - 1] else null
-
-                        if (isChain && previousTask != null) {
-                            val calculatedLeaveTime = updatedTask.leaveTime ?: 0L
-
-                            if (calculatedLeaveTime < previousTask.time) {
-                                updatedTask.hasRouteConflict = true
-                                updatedTask.routeWarning = getString(R.string.route_conflict_warning)
-                            } else {
-                                updatedTask.hasRouteConflict = false
-                                updatedTask.routeWarning = null
-                            }
+                        // Проверка за конфликт с предходната задача (ако има такава)
+                        if (index > 0) {
+                            updatedTask.checkAndSetConflict(this@MainActivity, dayTasks[index - 1].getEndTime())
                         } else {
                             updatedTask.hasRouteConflict = false
                             updatedTask.routeWarning = null
                         }
 
                         firebaseManager.saveTask(updatedTask)
+                        if (!updatedTask.hasRouteConflict) notificationHelper.scheduleNotification(updatedTask)
+                        else notificationHelper.cancelNotification(updatedTask.id)
 
-                        if (!updatedTask.hasRouteConflict) {
-                            notificationHelper.scheduleNotification(updatedTask)
-                        } else {
-                            notificationHelper.cancelNotification(updatedTask.id)
-                        }
+                        // Обновяване на интерфейса
+                        val globalIdx = tasks.indexOfFirst { it.id == updatedTask.id }
+                        if (globalIdx != -1) adapter.notifyItemChanged(globalIdx)
+                        
+                        val calIdx = calendarTasks.indexOfFirst { it.id == updatedTask.id }
+                        if (calIdx != -1) calendarAdapter.notifyItemChanged(calIdx)
 
-                        calculateNext(
-                            index + 1,
-                            updatedTask.latitude,
-                            updatedTask.longitude
-                        )
+                        calculateNext(index + 1, updatedTask.latitude, updatedTask.longitude)
                     }
                 },
-                onError = { error ->
-                    Log.e("SAM_Routing", "Грешка при маршрут за ${task.title}: $error")
-
-                    runOnUiThread {
-                        calculateNext(
-                            index + 1,
-                            task.latitude,
-                            task.longitude
-                        )
-                    }
-                }
+                onError = { calculateNext(index + 1, task.latitude, task.longitude) }
             )
         }
 
-        val firstTask = dayTasks.first()
-
-        if (firstTask.startLatitude != null && firstTask.startLongitude != null) {
-            calculateNext(0, firstTask.startLatitude!!, firstTask.startLongitude!!)
-            return
-        }
-
-        if (ActivityCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) != android.content.pm.PackageManager.PERMISSION_GRANTED
-        ) {
-            return
-        }
-
-        fusedLocationClient
-            .getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
-            .addOnSuccessListener { location ->
-                if (location != null) {
-                    calculateNext(0, location.latitude, location.longitude)
-                } else {
-                    Toast.makeText(
-                        this,
-                        getString(R.string.toast_location_unavailable),
-                        Toast.LENGTH_SHORT
-                    ).show()
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
+                .addOnSuccessListener { loc ->
+                    val firstTask = dayTasks[0]
+                    val startLat = firstTask.startLatitude ?: loc?.latitude ?: 0.0
+                    val startLng = firstTask.startLongitude ?: loc?.longitude ?: 0.0
+                    calculateNext(0, startLat, startLng)
                 }
-            }
+        }
     }
-    private fun isSameDay(firstMillis: Long, secondMillis: Long): Boolean {
-        val firstCal = Calendar.getInstance().apply {
-            timeInMillis = firstMillis
-        }
 
-        val secondCal = Calendar.getInstance().apply {
-            timeInMillis = secondMillis
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 1 && grantResults.isNotEmpty() && grantResults[0] == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            loadData()
         }
+    }
 
-        return firstCal.get(Calendar.YEAR) == secondCal.get(Calendar.YEAR) &&
-                firstCal.get(Calendar.DAY_OF_YEAR) == secondCal.get(Calendar.DAY_OF_YEAR)
+    private fun setupSwipeToDelete(recyclerView: RecyclerView) {
+        ItemTouchHelper(SwipeToDeleteCallback(this) { position ->
+            val task = tasks[position]
+            MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.dialog_delete_task_title)
+                .setMessage(getString(R.string.dialog_delete_task_message, task.title))
+                .setPositiveButton(R.string.btn_delete) { _, _ ->
+                    firebaseManager.deleteTask(task.id, {
+                        notificationHelper.cancelNotification(task.id)
+                        tasks.removeAt(position)
+                        adapter.notifyItemRemoved(position)
+                        recalculateRoutesForDay(task.time)
+                        filterTasksForCalendar()
+                    }, { adapter.notifyItemChanged(position) })
+                }
+                .setNegativeButton(R.string.btn_cancel) { d, _ -> adapter.notifyItemChanged(position); d.dismiss() }
+                .show()
+        }).attachToRecyclerView(recyclerView)
+    }
+
+    private fun requestLocationPermissions() {
+        val p = mutableListOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) p.add(Manifest.permission.POST_NOTIFICATIONS)
+        ActivityCompat.requestPermissions(this, p.toTypedArray(), 1)
+    }
+
+    private fun filterTasksForCalendar() {
+        val cal = Calendar.getInstance().apply { timeInMillis = selectedCalendarDateMillis }
+        calendarTasks.clear()
+        calendarTasks.addAll(tasks.filter { isSameDay(it.time, cal.timeInMillis) })
+        calendarAdapter.notifyDataSetChanged()
+    }
+
+    private fun isSameDay(t1: Long, t2: Long): Boolean {
+        val c1 = Calendar.getInstance().apply { timeInMillis = t1 }
+        val c2 = Calendar.getInstance().apply { timeInMillis = t2 }
+        return c1.get(Calendar.YEAR) == c2.get(Calendar.YEAR) && c1.get(Calendar.DAY_OF_YEAR) == c2.get(Calendar.DAY_OF_YEAR)
     }
 }

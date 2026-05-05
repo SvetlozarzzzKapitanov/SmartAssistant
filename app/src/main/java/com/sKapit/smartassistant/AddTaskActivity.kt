@@ -77,6 +77,7 @@ class AddTaskActivity : AppCompatActivity() {
 
         val inputTitle = findViewById<EditText>(R.id.inputTitle)
         val inputTime = findViewById<EditText>(R.id.inputTime)
+        val inputDuration = findViewById<EditText>(R.id.inputDuration)
         val inputLocation = findViewById<EditText>(R.id.inputLocation)
         val btnSave = findViewById<Button>(R.id.btnSave)
         val toggleGroupTransport = findViewById<MaterialButtonToggleGroup>(R.id.toggleGroupTransport)
@@ -94,6 +95,9 @@ class AddTaskActivity : AppCompatActivity() {
             selectedTimeInMillis = intent.getLongExtra("time", System.currentTimeMillis())
             val sdf = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
             inputTime.setText(sdf.format(Date(selectedTimeInMillis)))
+            
+            val duration = intent.getIntExtra("duration", 30)
+            inputDuration.setText(duration.toString())
 
             selectedAddress = intent.getStringExtra("location") ?: ""
             inputLocation.setText(selectedAddress)
@@ -127,6 +131,7 @@ class AddTaskActivity : AppCompatActivity() {
 
         btnSave.setOnClickListener {
             val title = inputTitle.text.toString().trim()
+            val durationStr = inputDuration.text.toString().trim()
             
             if (title.isEmpty()) {
                 Toast.makeText(this, getString(R.string.error_enter_title), Toast.LENGTH_SHORT).show()
@@ -137,6 +142,8 @@ class AddTaskActivity : AppCompatActivity() {
                 Toast.makeText(this, getString(R.string.error_select_location), Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
+
+            val duration = durationStr.toIntOrNull() ?: 30
 
             val travelMode = when (toggleGroupTransport.checkedButtonId) {
                 R.id.btnWalk -> TravelMode.WALKING.value
@@ -152,6 +159,7 @@ class AddTaskActivity : AppCompatActivity() {
                 putExtra("id", existingTaskId)
                 putExtra("title", title)
                 putExtra("time", selectedTimeInMillis)
+                putExtra("duration", duration)
                 putExtra("location", selectedAddress)
                 putExtra("lat", selectedLat)
                 putExtra("lng", selectedLng)

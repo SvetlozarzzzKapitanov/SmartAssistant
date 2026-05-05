@@ -22,130 +22,148 @@
             app:navigationIcon="@android:drawable/ic_menu_revert" />
     </com.google.android.material.appbar.AppBarLayout>
 
-    <LinearLayout
-        android:orientation="vertical"
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingHorizontal="24dp"
-        android:paddingTop="24dp">
+        android:layout_height="match_parent">
 
-        <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+        <LinearLayout
+            android:orientation="vertical"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="@string/hint_event_name"
-            app:startIconDrawable="@android:drawable/ic_menu_edit">
+            android:paddingHorizontal="24dp"
+            android:paddingTop="24dp"
+            android:paddingBottom="40dp">
 
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/inputTitle"
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="textCapSentences" />
-        </com.google.android.material.textfield.TextInputLayout>
+                android:hint="@string/hint_event_name"
+                app:startIconDrawable="@android:drawable/ic_menu_edit">
 
-        <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:hint="@string/hint_arrival_time"
-            app:startIconDrawable="@android:drawable/ic_menu_recent_history">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/inputTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textCapSentences" />
+            </com.google.android.material.textfield.TextInputLayout>
 
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/inputTime"
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:focusable="false"
-                android:clickable="true" />
-        </com.google.android.material.textfield.TextInputLayout>
+                android:layout_marginTop="20dp"
+                android:hint="@string/hint_arrival_time"
+                app:startIconDrawable="@android:drawable/ic_menu_recent_history">
 
-        <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:hint="@string/hint_start_location_optional"
-            app:startIconDrawable="@drawable/ic_location"
-            app:startIconTint="?attr/colorPrimary">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/inputTime"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:focusable="false"
+                    android:clickable="true" />
+            </com.google.android.material.textfield.TextInputLayout>
 
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/inputStartLocation"
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:focusable="false"
-                android:clickable="true" />
-        </com.google.android.material.textfield.TextInputLayout>
+                android:layout_marginTop="20dp"
+                android:hint="@string/hint_duration"
+                app:startIconDrawable="@android:drawable/ic_menu_today">
 
-        <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:hint="@string/hint_destination"
-            app:startIconDrawable="@android:drawable/ic_dialog_map">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/inputDuration"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="number"
+                    android:text="@string/default_duration" />
+            </com.google.android.material.textfield.TextInputLayout>
 
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/inputLocation"
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:focusable="false"
-                android:clickable="true" />
-        </com.google.android.material.textfield.TextInputLayout>
+                android:layout_marginTop="20dp"
+                android:hint="@string/hint_start_location_optional"
+                app:startIconDrawable="@drawable/ic_location"
+                app:startIconTint="?attr/colorPrimary">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnBestTime"
-            style="@style/Widget.Material3.Button.TextButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:layout_gravity="end"
-            android:textColor="?attr/colorPrimary"
-            android:text="@string/btn_analyze_best_time" />
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/inputStartLocation"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:focusable="false"
+                    android:clickable="true" />
+            </com.google.android.material.textfield.TextInputLayout>
 
-        <com.google.android.material.button.MaterialButtonToggleGroup
-            android:id="@+id/toggleGroupTransport"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_horizontal"
-            android:layout_marginTop="8dp"
-            app:singleSelection="true"
-            app:checkedButton="@+id/btnDrive">
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:hint="@string/hint_destination"
+                app:startIconDrawable="@android:drawable/ic_dialog_map">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/inputLocation"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:focusable="false"
+                    android:clickable="true" />
+            </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnDrive"
-                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:id="@+id/btnBestTime"
+                style="@style/Widget.Material3.Button.TextButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/btn_drive" />
+                android:layout_marginTop="4dp"
+                android:layout_gravity="end"
+                android:textColor="?attr/colorPrimary"
+                android:text="@string/btn_analyze_best_time" />
+
+            <com.google.android.material.button.MaterialButtonToggleGroup
+                android:id="@+id/toggleGroupTransport"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="8dp"
+                app:singleSelection="true"
+                app:checkedButton="@+id/btnDrive">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnDrive"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/btn_drive" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnWalk"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/btn_walk" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnTransit"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/btn_transit" />
+            </com.google.android.material.button.MaterialButtonToggleGroup>
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnWalk"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/btn_walk" />
+                android:id="@+id/btnSave"
+                style="@style/Widget.Material3.Button"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:text="@string/btn_plan_with_sam"
+                android:layout_marginTop="40dp"
+                app:cornerRadius="16dp"
+                android:textSize="16sp" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnTransit"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/btn_transit" />
-        </com.google.android.material.button.MaterialButtonToggleGroup>
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnSave"
-            style="@style/Widget.Material3.Button"
-            android:layout_width="match_parent"
-            android:layout_height="60dp"
-            android:text="@string/btn_plan_with_sam"
-            android:layout_marginTop="40dp"
-            app:cornerRadius="16dp"
-            android:textSize="16sp" />
-
-
-
-
-    </LinearLayout>
-
+        </LinearLayout>
+    </ScrollView>
 </LinearLayout>

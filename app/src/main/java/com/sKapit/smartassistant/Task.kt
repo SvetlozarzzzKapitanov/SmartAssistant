@@ -23,6 +23,7 @@ data class Task(
     var title: String = "",
     var description: String? = null,
     var time: Long = 0L,
+    var durationMinutes: Int = 30,
     var locationName: String = "",
     var latitude: Double = 0.0,
     var longitude: Double = 0.0,
@@ -41,6 +42,28 @@ data class Task(
     companion object {
         private val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
         private val dateFormat = SimpleDateFormat("EEE, d MMM", Locale("bg", "BG"))
+    }
+
+    fun getEndTime(): Long {
+        return time + TimeUnit.MINUTES.toMillis(durationMinutes.toLong())
+    }
+
+    /**
+     * Проверява за конфликт с предходна задача и генерира съобщение.
+     */
+    fun checkAndSetConflict(context: Context, prevTaskEndTime: Long) {
+        val leave = leaveTime ?: 0L
+        hasRouteConflict = leave < prevTaskEndTime
+        
+        if (hasRouteConflict && leave > 0) {
+            routeWarning = context.getString(
+                R.string.route_conflict_warning_detailed,
+                timeFormat.format(Date(leave)),
+                timeFormat.format(Date(prevTaskEndTime))
+            )
+        } else {
+            routeWarning = null
+        }
     }
 
     fun getFormattedArrivalTime(): String {
